@@ -1,27 +1,32 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl"> <!-- RTL برای پارسی -->
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JET Token - Turbo Explosion of Speedy Profits!</title>
+    <script src="web3.js"></script>
+    <script src="jquery.min.js"></script>
+    <script src="timer.js"></script>
+    <script src="app.js"></script>
+    <script src="main.min.js"></script>
     <style>
         body { 
-            font-family: 'Arial', sans-serif; 
+            font-family: Arial, sans-serif; 
             margin: 0; padding: 0; 
-            background: url('IMAGE_2.jpg') no-repeat center/cover; /* بک‌گراند صفحه اول: موشک به ماه */
+            background: url('IMAGE_2.jpg') no-repeat center/cover; 
             color: #fff; 
             text-align: center; 
             min-height: 100vh;
         }
         header { 
-            background: url('IMAGE_4.jpg') no-repeat center/cover; /* بک‌گراند هدر */
+            background: url('IMAGE_4.jpg') no-repeat center/cover; 
             padding: 40px 20px; 
             position: relative; 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
         }
-        .logo { max-width: 100px; height: auto; } /* لوگو سمت چپ */
+        .logo { max-width: 100px; height: auto; } 
         .header-content { flex-grow: 1; text-align: center; }
         h1 { margin: 0; font-size: 3em; color: #ff6b35; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
         .symbol { font-size: 2em; color: #f7931e; font-weight: bold; margin: 10px 0; }
@@ -32,30 +37,31 @@
         .btn:hover { transform: scale(1.05); }
         .token-box { background: rgba(255,255,255,0.1); padding: 20px; margin: 20px auto; max-width: 400px; border-radius: 10px; cursor: pointer; word-break: break-all; }
         .presale-box { background: rgba(0,0,0,0.7); padding: 30px; margin: 40px auto; max-width: 500px; border-radius: 15px; }
-        .stages { position: relative; height: 30px; background: #333; border-radius: 15px; margin: 20px 0; overflow: hidden; transform: skew(-20deg); } /* مستطیل کج برای stages */
-        .stage-progress { height: 100%; background: linear-gradient(45deg, #ff6b35, #f7931e); width: 50%; transform: skew(20deg); } /* فرض ۵۰% پیشرفت - عوض کن */
+        .stages { position: relative; height: 30px; background: #333; border-radius: 15px; margin: 20px 0; overflow: hidden; transform: skew(-20deg); } 
+        .stage-progress { height: 100%; background: linear-gradient(45deg, #ff6b35, #f7931e); width: 50%; transform: skew(20deg); } 
         form { text-align: center; }
         input, button { width: 80%; padding: 12px; margin: 10px; border: none; border-radius: 8px; }
         button { background: #ff6b35; color: #fff; cursor: pointer; }
         .supply { font-size: 1.5em; color: #ffd700; margin: 20px 0; }
+        #countdown { font-size: 2em; color: #ff6b35; margin: 20px; }
     </style>
 </head>
 <body>
     <header>
-        <img src="IMAGE_3.jpg" alt="لوگوی پروژه JET" class="logo" /> <!-- لوگو سمت چپ -->
+        <img src="IMAGE_3.jpg" alt="JET Logo" class="logo" /> 
         <div class="header-content">
             <h1>JET Token</h1>
-            <div class="symbol">JET</div>
+            <div class="symbol">JET</div> 
         </div>
-        <div style="width: 100px;"></div> <!-- spacer سمت راست -->
+        <div style="width: 100px;"></div> 
     </header>
 
     <section class="description">
-        <p>همه با هم در کنار هم به سوی آرزوهایی که شاید به خاطره ای تبدیل شده</p>
+        <p>Together, towards dreams that may have become memories.</p>
     </section>
 
     <section class="quote">
-        <p>*انسان قمار باز همیشه بازنده است ولی انسانی که احتمال میدهد برنده</p>
+        <p>*The gambler is always a loser, but the one who calculates probabilities wins.</p>
     </section>
 
     <section class="buttons">
@@ -66,49 +72,63 @@
     </section>
 
     <div class="token-box" onclick="copyAddress()">
-        <p>آدرس توکن: 0x1234...abcd (Contract Address)</p> <!-- عوض کن با آدرس واقعی -->
+        <p>Token Address: 0x1234...abcd (Contract Address)</p> 
     </div>
+
+    <div id="countdown">Presale Ends In: <span id="timer">Loading...</span></div>
 
     <section class="presale-box">
         <h2>Join JET Presale</h2>
         <p class="supply">Total Supply: 800,000,000 JET</p>
         <div class="stages">
-            <div class="stage-progress"></div> <!-- پیشرفت stages - ۴ استیج فرض کردم، width رو بر اساس پیشرفت عوض کن -->
+            <div class="stage-progress"></div> 
         </div>
-        <p>تعداد استیج‌ها: ۴ (Stage 1: ۲۵% - Stage 2: ۲۵% - Stage 3: ۲۵% - Stage 4: ۲۵%)</p>
+        <p>Stages: 4 (Stage 1: 25% - Stage 2: 25% - Stage 3: 25% - Stage 4: 25%)</p>
         
         <form>
-            <label>مقدار ETH:</label>
+            <label>ETH Amount:</label>
             <input type="number" placeholder="0.1 ETH" min="0.01" max="10" onchange="calculateTokens()" />
-            <p id="tokenOutput">توکن‌ها: ۰ JET (۱ ETH = ۱۰۰,۰۰۰ JET)</p>
+            <p id="tokenOutput">Tokens: 0 JET (1 ETH = 100,000 JET)</p>
             <button type="button" onclick="joinPresale()">Join Presale</button>
         </form>
     </section>
 
     <script>
         function copyAddress() {
-            const address = '0x1234...abcd'; // عوض کن
-            navigator.clipboard.writeText(address).then(() => alert('آدرس کپی شد!'));
+            const address = '0x1234...abcd'; 
+            navigator.clipboard.writeText(address).then(() => alert('Address copied!'));
         }
 
         function calculateTokens() {
             const eth = parseFloat(document.querySelector('input[type="number"]').value) || 0;
             const tokens = eth * 100000;
-            document.getElementById('tokenOutput').textContent = `توکن‌ها: ${tokens.toLocaleString()} JET`;
+            document.getElementById('tokenOutput').textContent = `Tokens: ${tokens.toLocaleString()} JET`;
         }
 
         function joinPresale() {
             const eth = document.querySelector('input[type="number"]').value;
             if (eth && eth > 0) {
-                alert(`Presale جوین شد! ${eth} ETH = ${eth * 100000} JET 🚀`);
+                alert(`Joined! ${eth} ETH = ${eth * 100000} JET 🚀`);
             } else {
-                alert('مقدار ETH وارد کن!');
+                alert('Enter ETH amount!');
             }
         }
 
         function buyTokens() {
-            alert('به صفحه Buy هدایت می‌شید! (لینک واقعی اضافه کن)');
+            alert('Redirecting to Buy page! (Add real link)');
         }
+
+        let endTime = new Date().getTime() + (7 * 24 * 60 * 60 * 1000);
+        function updateTimer() {
+            let now = new Date().getTime();
+            let distance = endTime - now;
+            let days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            let hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            document.getElementById('timer').innerText = days + 'd ' + hours + 'h';
+            if (distance < 0) document.getElementById('timer').innerText = 'ENDED!';
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer();
     </script>
 </body>
 </html>
