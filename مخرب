@@ -1,0 +1,160 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+/*
+  Best-effort reconstruction of provided bytecode.
+  Implements ERC20 with Ownable, Pausable, Mintable/Burnable, Permit scaffold, and safety checks.
+  NOTE: This is a reconstruction/implementation inspired by the bytecode's selectors and strings,
+  not a 1:1 decompilation guarantee.
+*/
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+
+contract PowerToken is Context, ERC20, ERC20Burnable, Ownable, Pausable {
+    // Some common revert strings observed in bytecode -> reuse them for parity
+    string private constant ERR_INVALID_TOKEN_ADDR = "Invalid token address";
+    string private constant ERR_NOT_OWNER = "Ownable: caller is not the owner";
+    string private constant ERR_INSUFFICIENT = "ERC20: transfer amount exceeds balance";
+
+    // LP / admin toggles (mirroring filters/flags seen in bytecode)
+    bool public tradingEnabled;
+    mapping(address => bool) public isExcludedFromFees;
+    mapping(address => bool) public blacklisted;
+
+    event TradingEnabled();
+    event TradingDisabled();
+    event Blacklisted(address indexed who);
+    event UnBlacklisted(address indexed who);
+    event ExcludedFromFees(address indexed who);
+    event IncludedInFees(address indexed who);
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint256 initialSupply
+    ) ERC20(name_, symbol_) {
+        // deployer receives initial supply
+        _mint(_msgSender(), initialSupply);
+        tradingEnabled = false;
+        isExcludedFromFees[_msgSender()] = true;
+    }
+
+    // --- Overrides for pause/trade control ---
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    function enableTrading() external onlyOwner {
+        tradingEnabled = true;
+        emit TradingEnabled();
+    }
+
+    function disableTrading() external onlyOwner {
+        tradingEnabled = false;
+        emit TradingDisabled();
+    }
+
+    // --- Fee exclusion / blacklist management ---
+    function excludeFromFees(address account) external onlyOwner {
+        require(account != address(0), ERR_INVALID_TOKEN_ADDR);
+        isExcludedFromFees[account] = true;
+        emit ExcludedFromFees(account);
+    }
+
+    function includeInFees(address account) external onlyOwner {
+        require(account != address(0), ERR_INVALID_TOKEN_ADDR);
+        isExcludedFromFees[account] = false;
+        emit IncludedInFees(account);
+    }
+
+    function blacklist(address account) external onlyOwner {
+        require(account != address(0), ERR_INVALID_TOKEN_ADDR);
+        blacklisted[account] = true;
+        emit Blacklisted(account);
+    }
+
+    function unblacklist(address account) external onlyOwner {
+        blacklisted[account] = false;
+        emit UnBlacklisted(account);
+    }
+
+    // --- Minting (owner only) ---
+    function mint(address to, uint256 amount) external onlyOwner {
+        require(to != address(0), ERR_INVALID_TOKEN_ADDR);
+        _mint(to, amount);
+    }
+
+    // emergency withdraw mistakenly-sent ERC20 tokens (owner only)
+    function rescueERC20(address token, address to, uint256 amount) external onlyOwner {
+        require(token != address(this), "Cannot rescue native token");
+        require(to != address(0), ERR_INVALID_TOKEN_ADDR);
+        // minimal interface
+        (bool success, bytes memory data) = token.call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "Rescue failed");
+    }
+
+    // --- Standard ERC20 overrides to add pause/trading/blacklist checks ---
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        // when paused, block transfers except mint/burn by owner
+        require(!paused() || owner() == _msgSender(), "Pausable: paused");
+
+        // trading gate: allow owner & excluded addresses to move before trading enabled
+        if (!tradingEnabled) {
+            require(isExcludedFromFees[_msgSender()] || _msgSender() == owner(), "Trading is not enabled");
+        }
+
+        // blacklist check
+        require(!blacklisted[from] && !blacklisted[to] && !blacklisted[_msgSender()], "Blacklisted address");
+    }
+
+    // Optional: custom transfer function that mimics fee-exclusion hook (no fee applied here,
+    // but placeholder for on-chain logic visible in bytecode style)
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        // keep ERC20 revert messages, but map to our constant for parity
+        require(to != address(0), ERR_INVALID_TOKEN_ADDR);
+        return super.transfer(to, amount);
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+        require(to != address(0), ERR_INVALID_TOKEN_ADDR);
+        return super.transferFrom(from, to, amount);
+    }
+
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        require(spender != address(0), ERR_INVALID_TOKEN_ADDR);
+        return super.approve(spender, amount);
+    }
+
+    // --- Optional/descriptive helper functions (selectors observed in bytecode) ---
+    function isOwner(address account) external view returns (bool) {
+        return account == owner();
+    }
+
+    // Allows owner to renounce ownership (OpenZeppelin ownable has this already)
+    // function renounceOwnership() public virtual override onlyOwner {
+    //     super.renounceOwnership();
+    // }
+
+    // Burn from account with allowance (ERC20Burnable provides burnFrom)
+    // Permit scaffold (not implemented fully) placeholder for EIP-2612 if desired:
+    // function permit(...) external { revert("Not implemented"); }
+
+    // --- Fallbacks / receive ---
+    receive() external payable {
+        // arbitrary: allow contract to receive ETH (for rescue patterns)
+    }
+
+    fallback() external payable {
+        // no-op
+    }
+}
